@@ -3,7 +3,10 @@ name = "advanced-rag"
 version = "0.1.0"
 description = ""
 authors = ["Unai"]
-package-mode = false
+packages = [
+    { include = "src" },
+]
+
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -12,7 +15,7 @@ langchain-ollama = "^0.2.0"
 pypdf = "^5.0.1"
 langchain-community = "^0.3.2"
 faiss-cpu = "^1.9.0"
-
+streamlit = "^1.39.0"
 
 [build-system]
 requires = ["poetry-core"]
