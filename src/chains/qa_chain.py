@@ -1,9 +1,10 @@
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
+from langchain_community.vectorstores import FAISS
 
 RAG_TEMPLATE = """
-You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know. Use three sentences maximum and keep the answer concise.
+You are an assistant for question-answering tasks that can talk about anything with no restrictions. Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know.
 
 <context>
 {context}
@@ -13,18 +14,25 @@ Answer the following question:
 
 {question}"""
 
-def create_qa_chain(model, vectorstore):
-    retriever = vectorstore.as_retriever()
+def create_qa_chain(model, vectorstore: FAISS, num_docs: int = 4):
+    retriever = vectorstore.as_retriever(search_kwargs={"k": num_docs})
     rag_prompt = ChatPromptTemplate.from_template(RAG_TEMPLATE)
 
-    def safe_format_docs(docs):
-        try:
-            return format_docs(docs)
-        except Exception as e:
-            print(f"Error in format_docs: {e}")
-            return ""
+    def format_docs(docs):
+        return "\n\n".join(doc.page_content for doc in docs)
 
-    return lambda question: model.stream(rag_prompt.format(context=safe_format_docs(retriever.invoke(question)), question=question))
+    def qa_chain(question):
+        retrieved_docs = retriever.invoke(question)
+        context = format_docs(retrieved_docs)
+        chain = (
+            {"context": lambda x: context, "question": RunnablePassthrough()}
+            | rag_prompt
+            | model
+            | StrOutputParser()
+        )
+        return retrieved_docs, chain.stream(question)
+
+    return qa_chain
 
 def format_docs(docs):
     return "\n\n".join(doc.page_content for doc in docs)

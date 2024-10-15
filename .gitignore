@@ -163,3 +163,7 @@ cython_debug/
 
 *.faiss
 *.pkl
+
+data/
+
+processed_checkpoints.json
